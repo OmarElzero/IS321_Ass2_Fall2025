@@ -1,58 +1,99 @@
-# IS321_Ass2_Fall2025
-## B-Tree Index File Implementation (C++ with Binary Files)
+# IS321_Ass2_Fall2025 — B-Tree Index File Implementation
 
-### Course: File Management & Processing  
-### Semester: Fall 2025  
-### Group Members:
-- Member 1 – Node design + file read/write utilities + Deletion Support 
-- Member 2 – Search  
-- Member 3 – Insert (Part 1) & Deletion Support  
-- Member 4 – Insert (Splitting & Propagation)  
-- Member 5 – Deletion (Core Logic)  
+![Last Commit](https://img.shields.io/github/last-commit/OmarElzero/IS321_Ass2_Fall2025)
+![Top Language](https://img.shields.io/github/languages/top/OmarElzero/IS321_Ass2_Fall2025)
+![Repo Size](https://img.shields.io/github/repo-size/OmarElzero/IS321_Ass2_Fall2025)
 
----
+A group assignment for the **File Management & Processing (IS321)** course, Fall 2025. The goal is a disk-based B-Tree index stored inside a fixed-format binary file, implemented in C++: fixed-length nodes, insertion with splitting/propagation, deletion, key search, and a free-node linked list for reclaiming deleted node slots. The current codebase implements the core `BTreeNode` class that models a single on-disk node and its low-level operations.
 
-## 📌 Project Overview
+## Features
 
-This project implements a **disk-based B-Tree index** stored inside a binary file using C++.  
-The index supports:
+- Fixed-size node layout: each node stores `2*m + 1` integers (a leaf flag, then interleaved key/reference or key/child-pointer pairs), enabling direct random-access reads/writes by node index
+- Leaf vs. non-leaf node modes (`initAsLeaf` / `initAsNonLeaf`), plus a special "node zero" that tracks the head of a free-node linked list for reusing deleted slots
+- Key lookup and insertion-position search within a node (`findKeyPosition`, `findInsertPosition`)
+- In-node insert/delete of key-reference and key-child pairs, with internal shifting to keep entries contiguous
+- Binary file I/O per node (`writeToFile` / `readFromFile`) sized via `getNodeSize(m)`
+- Copy constructor and RAII-style cleanup for the node's dynamically allocated storage array
 
-- Creating an index file with fixed-length nodes  
-- Inserting records  
-- Deleting records  
-- Searching by key  
-- Managing a free-node linked list  
-- Displaying file content  
+## Tech Stack
 
-The implementation follows the exact requirements of **IS321 Assignment 2 – Fall 2025**.
+- C++ (raw pointers, `<fstream>` binary file I/O, no external dependencies)
 
----
+## Project Structure
 
-# 📁 File Structure & Node Format
+- `Node.h` — declares the `BTreeNode` class: accessors, initialization, capacity/status checks, insert/delete helpers, and file I/O
+- `Node.cpp` — implements `BTreeNode`'s node-storage logic (constructors, key counting, position lookup, insertion/deletion within a node, etc.)
+- `README.md` — assignment brief: course info, group member responsibilities, and the required top-level API (`CreateIndexFile`, `InsertNewRecordAtIndex`, `DeleteRecordFromIndex`, `DisplayIndexFileContent`, `SearchARecord`) that builds on top of `BTreeNode`
 
-Each B-Tree node is stored with this fixed structure:
+Note: as of this writing, the repository contains the `BTreeNode` building block; the top-level driver functions listed in the assignment brief are not yet present as separate source files.
 
-- `LeafFlag` → 0 = leaf, 1 = non-leaf  
-- Unused keys and references are stored as `-1`  
-- Node 0 is a special system node containing the head of the free-node list  
-- All nodes are fixed-size, so random access uses:
+## Architecture
 
+```mermaid
+classDiagram
+    class BTreeNode {
+        -int m
+        -int* storage
+        +BTreeNode(int m)
+        +BTreeNode(BTreeNode other)
+        +~BTreeNode()
+        +getOrder() int
+        +getLeafStatus() int
+        +setLeafStatus(status)
+        +getNextFree() int
+        +setNextFree(next)
+        +initAsEmpty(nextFree)
+        +initAsLeaf()
+        +initAsNonLeaf()
+        +initAsNodeZero(firstFree)
+        +isEmpty() bool
+        +keyCount() int
+        +isFull() bool
+        +getMaxKeys() int
+        +findKeyPosition(key) int
+        +findInsertPosition(key) int
+        +insertKeyRef(key, ref) bool
+        +insertChildKey(child, key) bool
+        +deleteKey(key) bool
+        +deleteAtPosition(pos)
+        +clearPosition(pos)
+        +writeToFile(file, nodeIndex)
+        +readFromFile(file, nodeIndex)
+        +getNodeSize(m)$ int
+        +printNode(nodeIndex)
+        -shiftRight(fromPos)
+        -shiftLeft(fromPos)
+        -clearAll()
+    }
+```
 
----
+## Installation
 
-# 🔧 Required Functions
+Requires a C++ compiler (e.g. g++) supporting C++11 or later.
+
+```bash
+g++ -std=c++11 -c Node.cpp -o Node.o
+```
+
+## Usage
+
+`BTreeNode` is a building block meant to be driven by a main program that calls the assignment's required functions (`CreateIndexFile`, `InsertNewRecordAtIndex`, `SearchARecord`, `DeleteRecordFromIndex`, `DisplayIndexFileContent`). Example of using the node class directly:
 
 ```cpp
-void CreateIndexFile(char* filename, int numberOfRecords, int m);
+#include "Node.h"
 
-int InsertNewRecordAtIndex(char* filename, int RecordID, int Reference);
-// Returns -1 if no place to insert, or the index where inserted.
+BTreeNode node(5);        // order-5 B-tree node
+node.initAsLeaf();
+node.insertKeyRef(42, 100);
+int pos = node.findKeyPosition(42);
+```
 
-void DeleteRecordFromIndex(char* filename, int RecordID);
+## Demo
 
-void DisplayIndexFileContent(char* filename);
-// Print each node on a new line.
+No live demo is available for this project.
 
-int SearchARecord(char* filename, int RecordID);
-// Returns the reference, or -1 if not found.
+---
 
+**Author:** OmarElzero · [GitHub](https://github.com/OmarElzero)
+
+_Last updated: 2026-08-23_
